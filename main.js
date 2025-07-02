@@ -20,9 +20,35 @@ scene.add(cube);
 camera.position.z = 5;
 
 const animate = () => {
-    cube.rotation.x += 0.01;
-    cube.rotation.y += 0.01;
     renderer.render(scene, camera);
 }
 
 renderer.setAnimationLoop(animate);
+
+let lastMouseX, lastMouseY;
+
+const rotateMetronome = (e) => {
+    if (lastMouseX == null || lastMouseY == null) {
+        lastMouseX = e.x;
+        lastMouseY = e.y;
+        return;
+    }
+
+    const diffX = (e.x - lastMouseX) * 0.01;
+    cube.rotation.y += diffX;
+
+    const diffY = (e.y - lastMouseY) * 0.01;
+    cube.rotation.x += diffY;
+
+    lastMouseX = e.x;
+    lastMouseY = e.y;
+}
+
+renderer.domElement.addEventListener("mousedown", () => {
+    renderer.domElement.addEventListener("mousemove", rotateMetronome);
+});
+
+renderer.domElement.addEventListener("mouseup", () => {
+    renderer.domElement.removeEventListener("mousemove", rotateMetronome)
+    lastMouseX = null, lastMouseY = null;
+});
