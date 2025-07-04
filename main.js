@@ -11,6 +11,8 @@ const MAX_CAMERA_DISTANCE = 4.5;
 const MIN_BPM = 40;
 const DEFAULT_BPM = 120;
 const MAX_BPM = 208;
+const PENDULUM_BAR_ROTATION_SENSITIVTY = 0.01;
+const PENDULUM_BAR_MAX_EULER_ROTATION_Z = 1.2;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -63,24 +65,83 @@ const onMouseDown = (e) => {
     }
 }
 
+let oldMouseX, mouseXDifference;
+
+const getMouseXDifference = (e) => {
+    mouseXDifference = oldMouseX - e.clientX;
+    oldMouseX = e.clientX;
+}
+
 const addMetronomeInteractions = (metronome) => {
     const pendulumWeight = metronome.getObjectByName("PendulumWeight");
+    const pendulumBar = metronome.getObjectByName("PendulumBar");
 
-    const dragControls = new DragControls([pendulumWeight], camera, renderer.domElement);
-    let oldX, oldZ;
+    const dragControls = new DragControls([pendulumWeight, pendulumBar], camera, renderer.domElement);
+    let pendulumWeightOldX, pendulumWeightOldZ, pendulumBarOldX, pendulumBarOldY, pendulumBarOldZ;
 
-    dragControls.addEventListener("dragstart", function(event) {
+    dragControls.addEventListener("dragstart", (event) => {
         orbitControls.enabled = false;
-        oldX = event.object.position.x;
-        oldZ = event.object.position.z;
+
+        if (event.object.name == "PendulumWeight") {
+            console.log(event.object.name)
+            pendulumWeightOldX = event.object.position.x;
+            pendulumWeightOldZ = event.object.position.z;
+        }
+
+        if (event.object.name == "PendulumBar") {
+            pendulumBarOldX = event.object.position.x;
+            pendulumBarOldY = event.object.position.y;
+            pendulumBarOldZ = event.object.position.z;
+
+            window.addEventListener("mousemove", getMouseXDifference);
+        }
     });
 
-    dragControls.addEventListener("drag", function(event) {
-        event.object.position.x = oldX;
-        event.object.position.z = oldZ;
+    dragControls.addEventListener("drag", (event) => {
+        if (event.object.name == "PendulumWeight") {
+            event.object.position.x = pendulumWeightOldX;
+            event.object.position.z = pendulumWeightOldZ;
+        }
+
+        if (event.object.name == "PendulumBar") {
+            // window.addEventListener("mousemove", );
+
+            let rotateLeft = null;
+
+            if (mouseXDifference < 0) {
+                rotateLeft = true;
+            } else if (mouseXDifference > 0) {
+                rotateLeft = false;
+            }
+            
+
+            if (rotateLeft && event.object.rotation.z >= -PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+                event.object.rotation.z -= PENDULUM_BAR_ROTATION_SENSITIVTY;
+            } else if (rotateLeft == false && event.object.rotation.z <= PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+                event.object.rotation.z += PENDULUM_BAR_ROTATION_SENSITIVTY;
+            }
+
+            // const differenceX = pendulumBarOldX - event.object.position.x;
+            // console.log(differenceX)
+
+            // if (differenceX < 0 && event.object.rotation.z >= -PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+            //     event.object.rotation.z -= PENDULUM_BAR_ROTATION_SENSITIVTY;
+            // } else if (differenceX > 0 && event.object.rotation.z <= PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+            //     event.object.rotation.z += PENDULUM_BAR_ROTATION_SENSITIVTY;
+            // }
+
+            // console.log(event.object.rotation)
+
+            event.object.position.x = pendulumBarOldX;
+            event.object.position.y = pendulumBarOldY;
+            event.object.position.z = pendulumBarOldZ;
+
+            pendulumBarOldX = event.object.position.x;
+        }
     });
 
-    dragControls.addEventListener("dragend", function(event) {
+    dragControls.addEventListener("dragend", (event) => {
+        window.removeEventListener("mousemove", getMouseXDifference);
         orbitControls.enabled = true;
     });
 }
