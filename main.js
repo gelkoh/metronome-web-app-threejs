@@ -5,6 +5,9 @@ const ZOOM_SENSITIVITY = 0.2;
 const DEFAULT_ZOOM = 6;
 const MAX_ZOOM = 2;
 const MIN_ZOOM = 10;
+const DEFAULT_BPM = 120;
+const MIN_BPM = 40;
+const MAX_BPM = 208;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -84,3 +87,67 @@ renderer.domElement.addEventListener("mouseup", () => {
 });
 
 renderer.domElement.addEventListener("wheel", handleZoom);
+
+const metronomeAudio = document.getElementById("metronomeAudio");
+const metronomeToggleButton = document.getElementById("metronomeToggleButton");
+const bpmInput = document.getElementById("bpmInput");
+
+bpmInput.setAttribute("min", MIN_BPM);
+bpmInput.setAttribute("max", MAX_BPM);
+bpmInput.setAttribute("value", DEFAULT_BPM);
+
+const getBpmInMs = (bpm) => {
+    return 60 * 1000 / bpm;
+}
+
+let intervalId;
+let isMetronomeActive = false;
+let bpmInMs = getBpmInMs(bpmInput.value);
+
+const startMetronome = () => {
+    if (isMetronomeActive) return;
+
+    metronomeToggleButton.textContent = "Stop";
+    isMetronomeActive = true;
+
+    intervalId ??= setInterval(() => {
+        metronomeAudio.play();
+    }, bpmInMs);
+}
+
+const stopMetronome = () => {
+    if (!isMetronomeActive) return;
+
+    metronomeToggleButton.textContent = "Start";
+    isMetronomeActive = false;
+    clearInterval(intervalId);
+    intervalId = null;
+}
+
+const toggleMetronome = () => {
+    if (intervalId == null) {
+        startMetronome();
+        metronomeToggleButton.classList.add("metronome-active");
+    } else {
+        stopMetronome();
+        metronomeToggleButton.classList.remove("metronome-active");
+    }
+}
+
+const updateBpm = () => {
+    if (bpmInput.value > MAX_BPM) {
+        bpmInput.value = MAX_BPM;
+    } else if (bpmInput.value < MIN_BPM) {
+        bpmInput.value = MIN_BPM;
+    }
+
+    bpmInMs = getBpmInMs(bpmInput.value);
+
+    if (isMetronomeActive) {
+        stopMetronome();
+        startMetronome();
+    }
+}
+
+metronomeToggleButton.addEventListener("click", toggleMetronome)
+bpmInput.addEventListener("change", updateBpm);

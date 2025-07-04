@@ -9,5 +9,16 @@
 <body>
     <h1>Metronome Web App ThreeJS</h1>
 
+    <div class="controls">
+        <div class="bpm-display-and-input">
+            <input id="bpmInput" type="number"/>
+            <span>&nbsp;BPM</span>
+        </div>
+
+        <button id="metronomeToggleButton">Start</button>
+    </div>
+
+    <audio id="metronomeAudio" src="./public/sounds/Perc_MetronomeQuartz_hi.wav"/>
+
     <script type="module" src="/main.js"></script>
 </body>
