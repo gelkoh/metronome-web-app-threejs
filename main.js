@@ -1,12 +1,14 @@
 import * as THREE from "three";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 
 const ROTATE_SENSITIVITY = 0.01;
 const ZOOM_SENSITIVITY = 0.2;
-const DEFAULT_ZOOM = 6;
-const MAX_ZOOM = 2;
-const MIN_ZOOM = 10;
-const DEFAULT_BPM = 120;
+const MIN_CAMERA_DISTANCE = 1.5;
+const DEFAULT_CAMERA_DISTANCE = 3;
+const MAX_CAMERA_DISTANCE = 4.5;
 const MIN_BPM = 40;
+const DEFAULT_BPM = 120;
 const MAX_BPM = 208;
 
 const scene = new THREE.Scene();
@@ -21,12 +23,21 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const geometry = new THREE.BoxGeometry(1, 1, 1);
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.minDistance = MIN_CAMERA_DISTANCE;
+controls.maxDistance = MAX_CAMERA_DISTANCE;
 
-camera.position.z = DEFAULT_ZOOM;
+const light = new THREE.AmbientLight(0xFFFFFF, 1);
+scene.add(light);
+
+const loader = new GLTFLoader();
+loader.load("./public/models/metronome.glb", function(gltf) {
+    scene.add(gltf.scene);
+}, undefined, function(error) {
+    console.error(error);
+});
+
+camera.position.z = DEFAULT_CAMERA_DISTANCE;
 
 const animate = () => {
     renderer.render(scene, camera);
@@ -40,22 +51,22 @@ const roundTo = (value, decimals) => {
 
 let lastMouseX, lastMouseY;
 
-const rotateMetronome = (e) => {
-    if (lastMouseX == null || lastMouseY == null) {
-        lastMouseX = e.x;
-        lastMouseY = e.y;
-        return;
-    }
-
-    const diffX = (e.x - lastMouseX) * ROTATE_SENSITIVITY;
-    cube.rotation.y += diffX;
-
-    const diffY = (e.y - lastMouseY) * ROTATE_SENSITIVITY;
-    cube.rotation.x += diffY;
-
-    lastMouseX = e.x;
-    lastMouseY = e.y;
-}
+// const rotateMetronome = (e) => {
+//     if (lastMouseX == null || lastMouseY == null) {
+//         lastMouseX = e.x;
+//         lastMouseY = e.y;
+//         return;
+//     }
+//
+//     const diffX = (e.x - lastMouseX) * ROTATE_SENSITIVITY;
+//     cube.rotation.y += diffX;
+//
+//     const diffY = (e.y - lastMouseY) * ROTATE_SENSITIVITY;
+//     cube.rotation.x += diffY;
+//
+//     lastMouseX = e.x;
+//     lastMouseY = e.y;
+// }
 
 const handleZoom = (e) => {
     if (e.deltaY < 0) {
@@ -76,17 +87,6 @@ const handleZoom = (e) => {
         }
     }
 }
-
-renderer.domElement.addEventListener("mousedown", () => {
-    renderer.domElement.addEventListener("mousemove", rotateMetronome);
-});
-
-renderer.domElement.addEventListener("mouseup", () => {
-    renderer.domElement.removeEventListener("mousemove", rotateMetronome);
-    lastMouseX = null, lastMouseY = null;
-});
-
-renderer.domElement.addEventListener("wheel", handleZoom);
 
 const metronomeAudio = document.getElementById("metronomeAudio");
 const metronomeToggleButton = document.getElementById("metronomeToggleButton");
