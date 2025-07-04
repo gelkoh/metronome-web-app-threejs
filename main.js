@@ -1,18 +1,8 @@
+import * as Constants from "./constants.js";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { DragControls } from "three/addons/controls/DragControls.js";
-
-const ROTATE_SENSITIVITY = 0.01;
-const ZOOM_SENSITIVITY = 0.2;
-const MIN_CAMERA_DISTANCE = 1.5;
-const DEFAULT_CAMERA_DISTANCE = 3;
-const MAX_CAMERA_DISTANCE = 4.5;
-const MIN_BPM = 40;
-const DEFAULT_BPM = 120;
-const MAX_BPM = 208;
-const PENDULUM_BAR_ROTATION_SENSITIVTY = 0.01;
-const PENDULUM_BAR_MAX_EULER_ROTATION_Z = 1.2;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
@@ -27,8 +17,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const orbitControls = new OrbitControls(camera, renderer.domElement);
-orbitControls.minDistance = MIN_CAMERA_DISTANCE;
-orbitControls.maxDistance = MAX_CAMERA_DISTANCE;
+orbitControls.minDistance = Constants.MIN_CAMERA_DISTANCE;
+orbitControls.maxDistance = Constants.MAX_CAMERA_DISTANCE;
 
 const light = new THREE.AmbientLight(0xFFFFFF, 1);
 scene.add(light);
@@ -115,10 +105,10 @@ const addMetronomeInteractions = (metronome) => {
             }
             
 
-            if (rotateLeft && event.object.rotation.z >= -PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
-                event.object.rotation.z -= PENDULUM_BAR_ROTATION_SENSITIVTY;
-            } else if (rotateLeft == false && event.object.rotation.z <= PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
-                event.object.rotation.z += PENDULUM_BAR_ROTATION_SENSITIVTY;
+            if (rotateLeft && event.object.rotation.z >= -Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+                event.object.rotation.z -= Constants.PENDULUM_BAR_ROTATION_SENSITIVTY;
+            } else if (rotateLeft == false && event.object.rotation.z <= Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+                event.object.rotation.z += Constants.PENDULUM_BAR_ROTATION_SENSITIVTY;
             }
 
             // const differenceX = pendulumBarOldX - event.object.position.x;
@@ -155,7 +145,7 @@ loader.load("./public/models/metronome.glb", function(gltf) {
     console.error(error);
 });
 
-camera.position.z = DEFAULT_CAMERA_DISTANCE;
+camera.position.z = Constants.DEFAULT_CAMERA_DISTANCE;
 
 const animate = () => {
     renderer.render(scene, camera);
@@ -171,9 +161,9 @@ const metronomeAudio = document.getElementById("metronomeAudio");
 const metronomeToggleButton = document.getElementById("metronomeToggleButton");
 const bpmInput = document.getElementById("bpmInput");
 
-bpmInput.setAttribute("min", MIN_BPM);
-bpmInput.setAttribute("max", MAX_BPM);
-bpmInput.setAttribute("value", DEFAULT_BPM);
+bpmInput.setAttribute("min", Constants.MIN_BPM);
+bpmInput.setAttribute("max", Constants.MAX_BPM);
+bpmInput.setAttribute("value", Constants.DEFAULT_BPM);
 
 const getBpmInMs = (bpm) => {
     return 60 * 1000 / bpm;
@@ -214,10 +204,10 @@ const toggleMetronome = () => {
 }
 
 const updateBpm = () => {
-    if (bpmInput.value > MAX_BPM) {
-        bpmInput.value = MAX_BPM;
-    } else if (bpmInput.value < MIN_BPM) {
-        bpmInput.value = MIN_BPM;
+    if (bpmInput.value > Constants.MAX_BPM) {
+        bpmInput.value = Constants.MAX_BPM;
+    } else if (bpmInput.value < Constants.MIN_BPM) {
+        bpmInput.value = Constants.MIN_BPM;
     }
 
     bpmInMs = getBpmInMs(bpmInput.value);

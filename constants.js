@@ -1,0 +1,10 @@
+export const ROTATE_SENSITIVITY = 0.01;
+export const ZOOM_SENSITIVITY = 0.2;
+export const MIN_CAMERA_DISTANCE = 1.5;
+export const DEFAULT_CAMERA_DISTANCE = 3;
+export const MAX_CAMERA_DISTANCE = 4.5;
+export const MIN_BPM = 40;
+export const DEFAULT_BPM = 120;
+export const MAX_BPM = 208;
+export const PENDULUM_BAR_ROTATION_SENSITIVTY = 0.01;
+export const PENDULUM_BAR_MAX_EULER_ROTATION_Z = 1.2;
