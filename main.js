@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js"
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { DragControls } from "three/addons/controls/DragControls.js";
 
 const ROTATE_SENSITIVITY = 0.01;
 const ZOOM_SENSITIVITY = 0.2;
@@ -23,16 +24,72 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.minDistance = MIN_CAMERA_DISTANCE;
-controls.maxDistance = MAX_CAMERA_DISTANCE;
+const orbitControls = new OrbitControls(camera, renderer.domElement);
+orbitControls.minDistance = MIN_CAMERA_DISTANCE;
+orbitControls.maxDistance = MAX_CAMERA_DISTANCE;
 
 const light = new THREE.AmbientLight(0xFFFFFF, 1);
 scene.add(light);
 
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+let intersected = null;
+let originalColor = null;
+
+const onMouseDown = (e) => {
+    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(pointer, camera);
+
+    const intersects = raycaster.intersectObjects(scene.children);
+
+    if (intersects.length > 0) {
+        if (intersected == intersects[0].object) return;
+
+        if (intersected != null) {
+            intersected.material.color.setHex(originalColor);
+        }
+
+        intersected = intersects[0].object;
+        originalColor = intersected.material.color.getHex();
+        intersected.material.color.set(255, 255, 255);
+    } else {
+        if (intersected == null) return;
+
+        intersected.material.color.set(originalColor);
+        intersected = null;
+    }
+}
+
+const addMetronomeInteractions = (metronome) => {
+    const pendulumWeight = metronome.getObjectByName("PendulumWeight");
+
+    const dragControls = new DragControls([pendulumWeight], camera, renderer.domElement);
+    let oldX, oldZ;
+
+    dragControls.addEventListener("dragstart", function(event) {
+        orbitControls.enabled = false;
+        oldX = event.object.position.x;
+        oldZ = event.object.position.z;
+    });
+
+    dragControls.addEventListener("drag", function(event) {
+        event.object.position.x = oldX;
+        event.object.position.z = oldZ;
+    });
+
+    dragControls.addEventListener("dragend", function(event) {
+        orbitControls.enabled = true;
+    });
+}
+
 const loader = new GLTFLoader();
 loader.load("./public/models/metronome.glb", function(gltf) {
     scene.add(gltf.scene);
+    const metronome = scene.children[1];
+    addMetronomeInteractions(metronome);
 }, undefined, function(error) {
     console.error(error);
 });
@@ -47,45 +104,6 @@ renderer.setAnimationLoop(animate);
 
 const roundTo = (value, decimals) => {
     return Math.round(value * 10 ** decimals) / 10 ** decimals;
-}
-
-let lastMouseX, lastMouseY;
-
-// const rotateMetronome = (e) => {
-//     if (lastMouseX == null || lastMouseY == null) {
-//         lastMouseX = e.x;
-//         lastMouseY = e.y;
-//         return;
-//     }
-//
-//     const diffX = (e.x - lastMouseX) * ROTATE_SENSITIVITY;
-//     cube.rotation.y += diffX;
-//
-//     const diffY = (e.y - lastMouseY) * ROTATE_SENSITIVITY;
-//     cube.rotation.x += diffY;
-//
-//     lastMouseX = e.x;
-//     lastMouseY = e.y;
-// }
-
-const handleZoom = (e) => {
-    if (e.deltaY < 0) {
-        if (camera.position.z >= MAX_ZOOM && 
-            camera.position.z - ZOOM_SENSITIVITY >= MAX_ZOOM
-        ) {
-            camera.position.z = roundTo(camera.position.z - ZOOM_SENSITIVITY, 2);
-            return;
-        }
-    }
-
-    if (e.deltaY > 0) {
-        if (
-            camera.position.z <= MIN_ZOOM &&
-            camera.position.z + ZOOM_SENSITIVITY <= MIN_ZOOM
-        ) {
-            camera.position.z = roundTo(camera.position.z + ZOOM_SENSITIVITY, 2);
-        }
-    }
 }
 
 const metronomeAudio = document.getElementById("metronomeAudio");
@@ -151,3 +169,5 @@ const updateBpm = () => {
 
 metronomeToggleButton.addEventListener("click", toggleMetronome)
 bpmInput.addEventListener("change", updateBpm);
+
+window.addEventListener("mousedown", onMouseDown);
