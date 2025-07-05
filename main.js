@@ -26,8 +26,22 @@ scene.add(light);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 
+let metronome;
+let pendulumBar;
+let pendulumWeight;
+
 let intersected = null;
 let originalColor = null;
+
+const audioContext = new AudioContext();
+const osc = audioContext.createOscillator();
+const gain = audioContext.createGain();
+osc.connect(gain);
+osc.type = "square";
+gain.connect(audioContext.destination);
+osc.frequency.value = 500;
+gain.gain.setValueAtTime(0, audioContext.currentTime);
+let oscStartedBefore = false;
 
 const onMouseDown = (e) => {
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -62,7 +76,16 @@ const getMouseXDifference = (e) => {
     oldMouseX = e.clientX;
 }
 
-const addMetronomeInteractions = (metronome) => {
+const getBpmInMs = (bpm) => {
+    return 60 * 1000 / bpm;
+}
+
+const playClick = () => {
+    gain.gain.setValueAtTime(1, audioContext.currentTime);
+    gain.gain.setValueAtTime(0, audioContext.currentTime + 0.05);
+}
+
+const addMetronomeInteractions = () => {
     const pendulumWeight = metronome.getObjectByName("PendulumWeight");
     const pendulumBar = metronome.getObjectByName("PendulumBar");
 
@@ -94,8 +117,6 @@ const addMetronomeInteractions = (metronome) => {
         }
 
         if (event.object.name == "PendulumBar") {
-            // window.addEventListener("mousemove", );
-
             let rotateLeft = null;
 
             if (mouseXDifference < 0) {
@@ -103,24 +124,12 @@ const addMetronomeInteractions = (metronome) => {
             } else if (mouseXDifference > 0) {
                 rotateLeft = false;
             }
-            
 
             if (rotateLeft && event.object.rotation.z >= -Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
                 event.object.rotation.z -= Constants.PENDULUM_BAR_ROTATION_SENSITIVTY;
             } else if (rotateLeft == false && event.object.rotation.z <= Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
                 event.object.rotation.z += Constants.PENDULUM_BAR_ROTATION_SENSITIVTY;
             }
-
-            // const differenceX = pendulumBarOldX - event.object.position.x;
-            // console.log(differenceX)
-
-            // if (differenceX < 0 && event.object.rotation.z >= -PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
-            //     event.object.rotation.z -= PENDULUM_BAR_ROTATION_SENSITIVTY;
-            // } else if (differenceX > 0 && event.object.rotation.z <= PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
-            //     event.object.rotation.z += PENDULUM_BAR_ROTATION_SENSITIVTY;
-            // }
-
-            // console.log(event.object.rotation)
 
             event.object.position.x = pendulumBarOldX;
             event.object.position.y = pendulumBarOldY;
@@ -139,15 +148,48 @@ const addMetronomeInteractions = (metronome) => {
 const loader = new GLTFLoader();
 loader.load("./public/models/metronome.glb", function(gltf) {
     scene.add(gltf.scene);
-    const metronome = scene.children[1];
-    addMetronomeInteractions(metronome);
+    metronome = scene.children[1];
+    pendulumBar = metronome.getObjectByName("PendulumBar");
+    pendulumWeight = metronome.getObjectByName("PendulumWeight");
+    addMetronomeInteractions();
 }, undefined, function(error) {
     console.error(error);
 });
 
 camera.position.z = Constants.DEFAULT_CAMERA_DISTANCE;
 
+const metronomeToggleButton = document.getElementById("metronomeToggleButton");
+const bpmInput = document.getElementById("bpmInput");
+
+bpmInput.setAttribute("min", Constants.MIN_BPM);
+bpmInput.setAttribute("max", Constants.MAX_BPM);
+bpmInput.setAttribute("value", Constants.DEFAULT_BPM);
+
+let intervalId;
+let isMetronomeActive = false;
+let bpmInMs = getBpmInMs(bpmInput.value);
+let isPendulumBarGoingRight = true;
+
+let updatesPerBeat = 60 * bpmInMs / 1000;
+let rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPerBeat;
+
 const animate = () => {
+    if (pendulumBar == null) return;
+
+    if (isMetronomeActive) {
+        if (pendulumBar.rotation.z >= Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+            isPendulumBarGoingRight = false;
+        } else if (pendulumBar.rotation.z <= -Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
+            isPendulumBarGoingRight = true;
+        }
+
+        if (isMetronomeActive && isPendulumBarGoingRight) {
+            pendulumBar.rotation.z += rotationAmount;
+        } else if (isMetronomeActive) {
+            pendulumBar.rotation.z -= rotationAmount;
+        }
+    }
+
     renderer.render(scene, camera);
 }
 
@@ -157,37 +199,34 @@ const roundTo = (value, decimals) => {
     return Math.round(value * 10 ** decimals) / 10 ** decimals;
 }
 
-const metronomeAudio = document.getElementById("metronomeAudio");
-const metronomeToggleButton = document.getElementById("metronomeToggleButton");
-const bpmInput = document.getElementById("bpmInput");
-
-bpmInput.setAttribute("min", Constants.MIN_BPM);
-bpmInput.setAttribute("max", Constants.MAX_BPM);
-bpmInput.setAttribute("value", Constants.DEFAULT_BPM);
-
-const getBpmInMs = (bpm) => {
-    return 60 * 1000 / bpm;
-}
-
-let intervalId;
-let isMetronomeActive = false;
-let bpmInMs = getBpmInMs(bpmInput.value);
-
 const startMetronome = () => {
     if (isMetronomeActive) return;
 
     metronomeToggleButton.textContent = "Stop";
+    pendulumBar.rotation.z = 1.2;
     isMetronomeActive = true;
 
-    intervalId ??= setInterval(() => {
-        metronomeAudio.play();
-    }, bpmInMs);
+    if (!oscStartedBefore) {
+        oscStartedBefore = true;
+        osc.start();
+    }
+
+    audioContext.resume();
+
+    setTimeout(() => {
+        playClick()
+
+        intervalId ??= setInterval(() => {
+            playClick()
+        }, bpmInMs);
+    }, bpmInMs / 2);
 }
 
 const stopMetronome = () => {
     if (!isMetronomeActive) return;
 
     metronomeToggleButton.textContent = "Start";
+    pendulumBar.rotation.z = 0;
     isMetronomeActive = false;
     clearInterval(intervalId);
     intervalId = null;
@@ -211,6 +250,8 @@ const updateBpm = () => {
     }
 
     bpmInMs = getBpmInMs(bpmInput.value);
+    updatesPerBeat = 60 * bpmInMs / 1000;
+    rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPerBeat;
 
     if (isMetronomeActive) {
         stopMetronome();
