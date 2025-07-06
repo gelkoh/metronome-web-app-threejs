@@ -354,3 +354,11 @@ metronomeToggleButton.addEventListener("click", toggleMetronome)
 bpmInput.addEventListener("change", updateBpm);
 
 window.addEventListener("mousedown", onMouseDown);
+
+const onWindowResize = () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+}
+
+window.addEventListener("resize", onWindowResize);
