@@ -57,6 +57,7 @@ let metronome;
 let pendulumBar;
 let pendulumWeight;
 const inputToBpmFactor = (Constants.MIN_BPM - Constants.MAX_BPM) / (Constants.PENDULUM_WEIGHT_MAX_Y - Constants.PENDULUM_WEIGHT_MIN_Y);
+let previousBpm = Constants.DEFAULT_BPM;
 
 let intersected = null;
 let originalColor = null;
@@ -131,7 +132,14 @@ const updateBpm = () => {
         bpmInput.value = Constants.MIN_BPM;
     }
 
-    pendulumWeight.position.y = bpmToY(bpmInput.value);
+    if (bpmInput.value < previousBpm) {
+        isPendulumWeightAdjusting = true;
+        isPendulumWeightAdjustingUpwards = true;
+    } else if (bpmInput.value > previousBpm) {
+        isPendulumWeightAdjusting = true;
+        isPendulumWeightAdjustingUpwards = false;
+    }
+
     bpmInMs = getBpmInMs(bpmInput.value);
     updatesPerBeat = 60 * bpmInMs / 1000;
     rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPerBeat;
@@ -140,6 +148,8 @@ const updateBpm = () => {
         stopMetronome();
         startMetronome();
     }
+
+    previousBpm = parseInt(bpmInput.value);
 }
 
 const playClick = () => {
@@ -186,6 +196,7 @@ const addMetronomeInteractions = () => {
 
             bpmInput.value = Math.round((event.object.position.y - Constants.PENDULUM_WEIGHT_MIN_Y) * inputToBpmFactor + Constants.MAX_BPM);
 
+            // TODO: Updating bpm here should not also set isPendulumWeightAdjusting true
             updateBpm();
         }
 
@@ -230,6 +241,8 @@ bpmInput.setAttribute("value", Constants.DEFAULT_BPM);
 let metronomeClickIntervalId;
 let isMetronomeActive = false;
 let isMetronomePreparing = false;
+let isPendulumWeightAdjusting = false;
+let isPendulumWeightAdjustingUpwards = null;
 let bpmInMs = getBpmInMs(bpmInput.value);
 let isPendulumBarGoingRight = true;
 
@@ -238,6 +251,26 @@ let rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPe
 
 const animate = () => {
     if (pendulumBar == null) return;
+
+    if (isPendulumWeightAdjusting) {
+        const newPendulumWeightY = bpmToY(bpmInput.value);
+
+        if (isPendulumWeightAdjustingUpwards) {
+            if (pendulumWeight.position.y + 0.05 > newPendulumWeightY) {
+                pendulumWeight.position.y = newPendulumWeightY;
+                isPendulumWeightAdjusting = false;
+            } else {
+                pendulumWeight.position.y += 0.05;
+            }
+        } else if (!isPendulumWeightAdjustingUpwards) {
+            if (pendulumWeight.position.y - 0.05 < newPendulumWeightY) {
+                pendulumWeight.position.y = newPendulumWeightY;
+                isPendulumWeightAdjusting = false;
+            } else {
+                pendulumWeight.position.y -= 0.05;
+            }
+        }
+    }
 
     if (isMetronomePreparing && pendulumBar.rotation.z < 1.2) {
         pendulumBar.rotation.z += 0.02;
