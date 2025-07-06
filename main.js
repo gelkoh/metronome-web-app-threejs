@@ -191,8 +191,9 @@ bpmInput.setAttribute("min", Constants.MIN_BPM);
 bpmInput.setAttribute("max", Constants.MAX_BPM);
 bpmInput.setAttribute("value", Constants.DEFAULT_BPM);
 
-let intervalId;
+let metronomeClickIntervalId;
 let isMetronomeActive = false;
+let isMetronomePreparing = false;
 let bpmInMs = getBpmInMs(bpmInput.value);
 let isPendulumBarGoingRight = true;
 
@@ -202,7 +203,9 @@ let rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPe
 const animate = () => {
     if (pendulumBar == null) return;
 
-    if (isMetronomeActive) {
+    if (isMetronomePreparing && pendulumBar.rotation.z < 1.2) {
+        pendulumBar.rotation.z += 0.0j;
+    } else if (isMetronomeActive) {
         if (pendulumBar.rotation.z >= Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
             isPendulumBarGoingRight = false;
         } else if (pendulumBar.rotation.z <= -Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
@@ -229,23 +232,33 @@ const startMetronome = () => {
     if (isMetronomeActive) return;
 
     metronomeToggleButton.textContent = "Stop";
-    pendulumBar.rotation.z = 1.2;
-    isMetronomeActive = true;
+    isMetronomePreparing = true;
 
-    if (!oscStartedBefore) {
-        oscStartedBefore = true;
-        osc.start();
-    }
+    let metronomePreparingCheckIntervalId;
 
-    audioContext.resume();
+    metronomePreparingCheckIntervalId ??= setInterval(() => {
+        if (pendulumBar.rotation.z >= 1.2) {
+            clearInterval(metronomePreparingCheckIntervalId);
+            isMetronomePreparing = false;
 
-    setTimeout(() => {
-        playClick()
+            isMetronomeActive = true;
 
-        intervalId ??= setInterval(() => {
-            playClick()
-        }, bpmInMs);
-    }, bpmInMs / 2);
+            if (!oscStartedBefore) {
+                oscStartedBefore = true;
+                osc.start();
+            }
+
+            audioContext.resume();
+
+            setTimeout(() => {
+                playClick()
+
+                metronomeClickIntervalId ??= setInterval(() => {
+                    playClick()
+                }, bpmInMs);
+            }, bpmInMs / 2);
+        }
+    }, 100);
 }
 
 const stopMetronome = () => {
@@ -254,12 +267,12 @@ const stopMetronome = () => {
     metronomeToggleButton.textContent = "Start";
     pendulumBar.rotation.z = 0;
     isMetronomeActive = false;
-    clearInterval(intervalId);
-    intervalId = null;
+    clearInterval(metronomeClickIntervalId);
+    metronomeClickIntervalId = null;
 }
 
 const toggleMetronome = () => {
-    if (intervalId == null) {
+    if (metronomeClickIntervalId == null) {
         startMetronome();
         metronomeToggleButton.classList.add("metronome-active");
     } else {
