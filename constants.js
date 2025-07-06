@@ -8,3 +8,5 @@ export const DEFAULT_BPM = 120;
 export const MAX_BPM = 208;
 export const PENDULUM_BAR_ROTATION_SENSITIVTY = 0.01;
 export const PENDULUM_BAR_MAX_EULER_ROTATION_Z = 1.2;
+export const PENDULUM_WEIGHT_MIN_Y = 0.2;
+export const PENDULUM_WEIGHT_MAX_Y = 1.35;

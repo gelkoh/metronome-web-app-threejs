@@ -80,8 +80,25 @@ const getBpmInMs = (bpm) => {
     return 60 * 1000 / bpm;
 }
 
+const updateBpm = () => {
+    if (bpmInput.value > Constants.MAX_BPM) {
+        bpmInput.value = Constants.MAX_BPM;
+    } else if (bpmInput.value < Constants.MIN_BPM) {
+        bpmInput.value = Constants.MIN_BPM;
+    }
+
+    bpmInMs = getBpmInMs(bpmInput.value);
+    updatesPerBeat = 60 * bpmInMs / 1000;
+    rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPerBeat;
+
+    if (isMetronomeActive) {
+        stopMetronome();
+        startMetronome();
+    }
+}
+
 const playClick = () => {
-    gain.gain.setValueAtTime(1, audioContext.currentTime);
+    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
     gain.gain.setValueAtTime(0, audioContext.currentTime + 0.05);
 }
 
@@ -96,7 +113,6 @@ const addMetronomeInteractions = () => {
         orbitControls.enabled = false;
 
         if (event.object.name == "PendulumWeight") {
-            console.log(event.object.name)
             pendulumWeightOldX = event.object.position.x;
             pendulumWeightOldZ = event.object.position.z;
         }
@@ -114,6 +130,16 @@ const addMetronomeInteractions = () => {
         if (event.object.name == "PendulumWeight") {
             event.object.position.x = pendulumWeightOldX;
             event.object.position.z = pendulumWeightOldZ;
+
+            if (event.object.position.y > Constants.PENDULUM_WEIGHT_MAX_Y) {
+                event.object.position.y = Constants.PENDULUM_WEIGHT_MAX_Y;
+            } else if (event.object.position.y < Constants.PENDULUM_WEIGHT_MIN_Y) {
+                event.object.position.y = Constants.PENDULUM_WEIGHT_MIN_Y;
+            }
+
+            bpmInput.value = Math.round((Constants.MAX_BPM - Constants.MIN_BPM) / (Constants.PENDULUM_WEIGHT_MAX_Y - Constants.PENDULUM_WEIGHT_MIN_Y) * (event.object.position.y - Constants.PENDULUM_WEIGHT_MIN_Y) + Constants.MIN_BPM);
+
+            updateBpm();
         }
 
         if (event.object.name == "PendulumBar") {
@@ -239,23 +265,6 @@ const toggleMetronome = () => {
     } else {
         stopMetronome();
         metronomeToggleButton.classList.remove("metronome-active");
-    }
-}
-
-const updateBpm = () => {
-    if (bpmInput.value > Constants.MAX_BPM) {
-        bpmInput.value = Constants.MAX_BPM;
-    } else if (bpmInput.value < Constants.MIN_BPM) {
-        bpmInput.value = Constants.MIN_BPM;
-    }
-
-    bpmInMs = getBpmInMs(bpmInput.value);
-    updatesPerBeat = 60 * bpmInMs / 1000;
-    rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPerBeat;
-
-    if (isMetronomeActive) {
-        stopMetronome();
-        startMetronome();
     }
 }
 
