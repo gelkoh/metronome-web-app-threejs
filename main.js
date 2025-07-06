@@ -20,8 +20,35 @@ const orbitControls = new OrbitControls(camera, renderer.domElement);
 orbitControls.minDistance = Constants.MIN_CAMERA_DISTANCE;
 orbitControls.maxDistance = Constants.MAX_CAMERA_DISTANCE;
 
-const light = new THREE.AmbientLight(0xFFFFFF, 1);
+// TODO: Find out why this ambient light is needed for THREEJS to not throw errors
+const light = new THREE.AmbientLight( 0x000000 );
 scene.add(light);
+
+const setUpLights = () => {
+    const targetObject = new THREE.Object3D();
+
+    const spotLight = new THREE.SpotLight(0xffffff);
+    spotLight.position.set(0, 5, 5);
+    spotLight.target = targetObject;
+    spotLight.power = 100;
+    spotLight.penumbra = 1;
+    scene.add(spotLight);
+
+    const spotLight2 = new THREE.SpotLight();
+    spotLight2.copy(spotLight);
+    spotLight2.position.set(5, 5, 0);
+    scene.add(spotLight2);
+
+    const spotLight3 = new THREE.SpotLight();
+    spotLight3.copy(spotLight);
+    spotLight3.position.set(0, 5, -5);
+    scene.add(spotLight3);
+
+    const spotLight4 = new THREE.SpotLight();
+    spotLight4.copy(spotLight);
+    spotLight4.position.set(-5, 5, 0);
+    scene.add(spotLight4);
+}
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -43,6 +70,18 @@ gain.connect(audioContext.destination);
 osc.frequency.value = 500;
 gain.gain.setValueAtTime(0, audioContext.currentTime);
 let oscStartedBefore = false;
+
+const loader = new GLTFLoader();
+loader.load("./public/models/metronome.glb", function(gltf) {
+    scene.add(gltf.scene);
+    metronome = scene.children[1];
+    pendulumBar = metronome.getObjectByName("PendulumBar");
+    pendulumWeight = metronome.getObjectByName("PendulumWeight");
+    addMetronomeInteractions();
+    setUpLights();
+}, undefined, function(error) {
+    console.error(error);
+});
 
 const onMouseDown = (e) => {
     pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -178,17 +217,6 @@ const addMetronomeInteractions = () => {
         orbitControls.enabled = true;
     });
 }
-
-const loader = new GLTFLoader();
-loader.load("./public/models/metronome.glb", function(gltf) {
-    scene.add(gltf.scene);
-    metronome = scene.children[1];
-    pendulumBar = metronome.getObjectByName("PendulumBar");
-    pendulumWeight = metronome.getObjectByName("PendulumWeight");
-    addMetronomeInteractions();
-}, undefined, function(error) {
-    console.error(error);
-});
 
 camera.position.z = Constants.DEFAULT_CAMERA_DISTANCE;
 
