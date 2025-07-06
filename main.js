@@ -29,6 +29,7 @@ const pointer = new THREE.Vector2();
 let metronome;
 let pendulumBar;
 let pendulumWeight;
+const inputToBpmFactor = (Constants.MIN_BPM - Constants.MAX_BPM) / (Constants.PENDULUM_WEIGHT_MAX_Y - Constants.PENDULUM_WEIGHT_MIN_Y);
 
 let intersected = null;
 let originalColor = null;
@@ -80,6 +81,10 @@ const getBpmInMs = (bpm) => {
     return 60 * 1000 / bpm;
 }
 
+const bpmToY = (bpm) => {
+    return (bpm - Constants.MAX_BPM) / inputToBpmFactor + Constants.PENDULUM_WEIGHT_MIN_Y;
+}
+
 const updateBpm = () => {
     if (bpmInput.value > Constants.MAX_BPM) {
         bpmInput.value = Constants.MAX_BPM;
@@ -87,6 +92,7 @@ const updateBpm = () => {
         bpmInput.value = Constants.MIN_BPM;
     }
 
+    pendulumWeight.position.y = bpmToY(bpmInput.value);
     bpmInMs = getBpmInMs(bpmInput.value);
     updatesPerBeat = 60 * bpmInMs / 1000;
     rotationAmount = Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z * 2 / updatesPerBeat;
@@ -104,6 +110,8 @@ const playClick = () => {
 
 const addMetronomeInteractions = () => {
     const pendulumWeight = metronome.getObjectByName("PendulumWeight");
+    pendulumWeight.position.y = bpmToY(Constants.DEFAULT_BPM);
+
     const pendulumBar = metronome.getObjectByName("PendulumBar");
 
     const dragControls = new DragControls([pendulumWeight, pendulumBar], camera, renderer.domElement);
@@ -137,7 +145,7 @@ const addMetronomeInteractions = () => {
                 event.object.position.y = Constants.PENDULUM_WEIGHT_MIN_Y;
             }
 
-            bpmInput.value = Math.round((Constants.MAX_BPM - Constants.MIN_BPM) / (Constants.PENDULUM_WEIGHT_MAX_Y - Constants.PENDULUM_WEIGHT_MIN_Y) * (event.object.position.y - Constants.PENDULUM_WEIGHT_MIN_Y) + Constants.MIN_BPM);
+            bpmInput.value = Math.round((event.object.position.y - Constants.PENDULUM_WEIGHT_MIN_Y) * inputToBpmFactor + Constants.MAX_BPM);
 
             updateBpm();
         }
@@ -204,7 +212,7 @@ const animate = () => {
     if (pendulumBar == null) return;
 
     if (isMetronomePreparing && pendulumBar.rotation.z < 1.2) {
-        pendulumBar.rotation.z += 0.0j;
+        pendulumBar.rotation.z += 0.02;
     } else if (isMetronomeActive) {
         if (pendulumBar.rotation.z >= Constants.PENDULUM_BAR_MAX_EULER_ROTATION_Z) {
             isPendulumBarGoingRight = false;
